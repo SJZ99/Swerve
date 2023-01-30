@@ -42,7 +42,8 @@ public class SwerveModule {
       int turningMotorChannel,
       int turningMotorEncoderChannel,
       boolean driveEncoderReversed,
-      boolean turningEncoderReversed) {
+      boolean turningEncoderReversed,
+      double cancoderOffset) {
 
     // initialize
     m_driveMotor = new WPI_TalonFX(driveMotorChannel);
@@ -61,30 +62,27 @@ public class SwerveModule {
     m_turningMotor.configVoltageCompSaturation(9);
 
     // sensor
-    
     m_turningEncoder.configSensorInitializationStrategy(SensorInitializationStrategy.BootToAbsolutePosition);
-    m_turningEncoder.configSensorDirection(turningEncoderReversed);
     m_turningEncoder.configAbsoluteSensorRange(AbsoluteSensorRange.Unsigned_0_to_360);
     m_turningEncoder.configFeedbackCoefficient(0.087890625, "deg", SensorTimeBase.PerSecond);
+    m_turningEncoder.configSensorDirection(turningEncoderReversed);
+    m_turningEncoder.configMagnetOffset(cancoderOffset);
 
+    // set remote sensor
     m_turningMotor.configRemoteFeedbackFilter(m_turningEncoder, 0);
     m_turningMotor.configSelectedFeedbackSensor(RemoteFeedbackDevice.RemoteSensor0);
-    
-    // m_turningMotor.setSelectedSensorPosition(m_turningEncoder.getAbsolutePosition());
-
     m_driveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-    m_driveMotor.configSelectedFeedbackCoefficient(ModuleConstants.kDriveCoefficient);
 
-    m_turningMotor.setSelectedSensorPosition(m_turningEncoder.getAbsolutePosition() / (360.0 / 2048.0));
-
+    // reverse
     m_driveMotor.setInverted(driveEncoderReversed);
     m_driveMotor.setSensorPhase(driveEncoderReversed);
 
-    m_driveMotor.configNeutralDeadband(0.08);
-    m_turningMotor.configNeutralDeadband(0.08);
-
     m_turningMotor.setInverted(driveEncoderReversed);
     m_turningMotor.setSensorPhase(turningEncoderReversed);
+
+    // deadband
+    m_driveMotor.configNeutralDeadband(0.1);
+    m_turningMotor.configNeutralDeadband(0.1);
 
     // current limit
     var currentLimit = new StatorCurrentLimitConfiguration();
@@ -97,43 +95,45 @@ public class SwerveModule {
     m_turningMotor.configStatorCurrentLimit(currentLimit);
 
     // PIDF
-    m_driveMotor.config_kF(0, 0.1);
+    m_driveMotor.config_kF(0, 0.2);
     m_driveMotor.config_kP(0, 0);
     m_driveMotor.config_kI(0, 0);
     m_driveMotor.config_kD(0, 0);
 
-    m_turningMotor.config_kF(0, 0.3);
-    m_turningMotor.config_kP(0, 1.5);
+    m_turningMotor.config_kF(0, 0.18);
+    m_turningMotor.config_kP(0, 0.75);
     m_turningMotor.config_kI(0, 0);
-    m_turningMotor.config_kD(0, 0);
+    m_turningMotor.config_kD(0, 0.8);
 
-    m_turningMotor.configMotionAcceleration(1000);
-    m_turningMotor.configMotionCruiseVelocity(1000);
+    m_turningMotor.configMotionAcceleration(1500);
+    m_turningMotor.configMotionCruiseVelocity(1500);
 
     // close loop setting
-    // m_driveMotor.configClosedloopRamp(0.3);
-    // m_turningMotor.configClosedloopRamp(0.5);
-    // m_driveMotor.configMaxIntegralAccumulator(0, 2000);
-    // m_turningMotor.configMaxIntegralAccumulator(0, 500);
-    m_turningMotor.configClosedLoopPeakOutput(0, 1);
+    m_turningMotor.configClosedLoopPeakOutput(0, 0.8);
 
 
   }
+  // CANcoder to talon
+  private double deg2raw(double deg) {
+    return deg / (360.0 / 4096.0);
+  }
 
-  // unit: meter
+  // m
   public double getDriveEncoderPosition() {
-    return m_driveMotor.getSelectedSensorPosition();
+    return m_driveMotor.getSelectedSensorPosition() * ModuleConstants.kDriveCoefficient;
   }
 
+  // m/s
   public double getDriveEncoderVelocity() {
-    return m_driveMotor.getSelectedSensorVelocity();
+    return m_driveMotor.getSelectedSensorVelocity() * ModuleConstants.kDriveCoefficient;
   }
 
+  // deg
   public double getTurningEncoderAngle() {
     // Set the distance (in this case, angle) in radians per pulse for the turning encoder.
     // This is the the angle through an entire rotation (2 * pi) divided by the
     // encoder resolution.
-    return m_turningMotor.getSelectedSensorPosition() * (360 / 2048);
+    return m_turningEncoder.getAbsolutePosition();
   }
 
   /**
@@ -163,17 +163,17 @@ public class SwerveModule {
    */
   public void setDesiredState(SwerveModuleState desiredState) {
     // Optimize the reference state to avoid spinning further than 90 degrees
-    SwerveModuleState state =
-        SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
+    SwerveModuleState state = desiredState;
+        // SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
 
     // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(0));
-    SmartDashboard.putNumber("desired(raw)", state.angle.getDegrees() / (360.0 / 2048.0));
-    SmartDashboard.putNumber("desired(deg)", state.angle.getDegrees());
-    SmartDashboard.putNumber("raw", m_turningMotor.getSelectedSensorPosition());
-    SmartDashboard.putNumber("absolute", m_turningEncoder.getAbsolutePosition());
     // SmartDashboard.putNumber("", getDriveEncoderPosition())
-    m_driveMotor.set(ControlMode.Velocity, state.speedMetersPerSecond / ModuleConstants.kDriveCoefficient);
-    m_turningMotor.set(ControlMode.MotionMagic, state.angle.getDegrees() / (360.0 / 2048.0));
+    SmartDashboard.putNumber("target(deg)" + m_turningEncoder.getDeviceID(), state.angle.getDegrees());
+    SmartDashboard.putNumber("target(raw)" + m_turningEncoder.getDeviceID(), deg2raw(state.angle.getDegrees()));
+    // m -> raw
+    // m_driveMotor.set(ControlMode.Velocity, state.speedMetersPerSecond / ModuleConstants.kDriveCoefficient);
+    // deg -> raw
+    m_turningMotor.set(ControlMode.MotionMagic, deg2raw(state.angle.getDegrees()));
   }
 
   /** Zeroes all the SwerveModule encoders. */

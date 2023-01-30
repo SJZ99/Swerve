@@ -31,9 +31,9 @@ public final class Constants {
     public static final int kFrontRightTurningMotorPort = 4;
     public static final int kRearRightTurningMotorPort = 8;
 
-    public static final boolean kFrontLeftTurningEncoderReversed = true;
+    public static final boolean kFrontLeftTurningEncoderReversed = false;
     public static final boolean kRearLeftTurningEncoderReversed = false;
-    public static final boolean kFrontRightTurningEncoderReversed = true;
+    public static final boolean kFrontRightTurningEncoderReversed = false;
     public static final boolean kRearRightTurningEncoderReversed = false;
 
     public static final boolean kFrontLeftDriveEncoderReversed = false;
@@ -88,6 +88,12 @@ public final class Constants {
     public static final double kPModuleTurningController = 1;
 
     public static final double kPModuleDriveController = 1;
+
+
+    public static final double kCancoderOffset1 = -212.43164062;
+    public static final double kCancoderOffset2 = -164.1796825;
+    public static final double kCancoderOffset3 = -319.921875;
+    public static final double kCancoderOffset4 = -68.46679688;    
   }
 
   public static final class OIConstants {
