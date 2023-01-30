@@ -28,6 +28,7 @@ public class DriveSubsystem extends SubsystemBase {
           DriveConstants.kFrontLeftTurningMotorEncoderChannel,
           DriveConstants.kFrontLeftDriveEncoderReversed,
           DriveConstants.kFrontLeftTurningEncoderReversed,
+          DriveConstants.kOutputRever1,
           ModuleConstants.kCancoderOffset1);
 
   private final SwerveModule m_rearLeft =
@@ -37,6 +38,7 @@ public class DriveSubsystem extends SubsystemBase {
           DriveConstants.kRearLeftTurningMotorEncoderChannel,
           DriveConstants.kRearLeftDriveEncoderReversed,
           DriveConstants.kRearLeftTurningEncoderReversed,
+          DriveConstants.kOutputRever3,
           ModuleConstants.kCancoderOffset3);
 
   private final SwerveModule m_frontRight =
@@ -46,6 +48,7 @@ public class DriveSubsystem extends SubsystemBase {
           DriveConstants.kFrontRightTurningMotorEncoderChannel,
           DriveConstants.kFrontRightDriveEncoderReversed,
           DriveConstants.kFrontRightTurningEncoderReversed,
+          DriveConstants.kOutputRever2,
           ModuleConstants.kCancoderOffset2);
 
   private final SwerveModule m_rearRight =
@@ -55,6 +58,7 @@ public class DriveSubsystem extends SubsystemBase {
           DriveConstants.kRearRightTurningMotorEncoderChannel,
           DriveConstants.kRearRightDriveEncoderReversed,
           DriveConstants.kRearRightTurningEncoderReversed,
+          DriveConstants.kOutputRever4,
           ModuleConstants.kCancoderOffset4);
 
   // The gyro sensor
@@ -93,11 +97,16 @@ public class DriveSubsystem extends SubsystemBase {
           m_rearLeft.getPosition(),
           m_rearRight.getPosition()
         });
-        
+
     SmartDashboard.putNumber("Mod1(deg)", m_frontLeft.getTurningEncoderAngle());
     SmartDashboard.putNumber("Mod2(deg)", m_frontRight.getTurningEncoderAngle());
     SmartDashboard.putNumber("Mod3(deg)", m_rearLeft.getTurningEncoderAngle());
     SmartDashboard.putNumber("Mod4(deg)", m_rearRight.getTurningEncoderAngle());
+
+    SmartDashboard.putNumber("Mod1(raw)", m_frontLeft.getTurningEncoderRaw());
+    SmartDashboard.putNumber("Mod2(raw)", m_frontRight.getTurningEncoderRaw());
+    SmartDashboard.putNumber("Mod3(raw)", m_rearLeft.getTurningEncoderRaw());
+    SmartDashboard.putNumber("Mod4(raw)", m_rearRight.getTurningEncoderRaw());
 
   }
 
@@ -141,8 +150,10 @@ public class DriveSubsystem extends SubsystemBase {
             fieldRelative
                 ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, m_gyro.getRotation2d())
                 : new ChassisSpeeds(xSpeed, ySpeed, rot));
+    
     SwerveDriveKinematics.desaturateWheelSpeeds(
         swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
+  
     m_frontLeft.setDesiredState(swerveModuleStates[0]);
     m_frontRight.setDesiredState(swerveModuleStates[1]);
     m_rearLeft.setDesiredState(swerveModuleStates[2]);

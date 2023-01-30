@@ -7,15 +7,12 @@ package frc.robot.subsystems;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.RemoteFeedbackDevice;
-import com.ctre.phoenix.motorcontrol.RemoteLimitSwitchSource;
-import com.ctre.phoenix.motorcontrol.RemoteSensorSource;
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.sensors.AbsoluteSensorRange;
 import com.ctre.phoenix.sensors.CANCoder;
 import com.ctre.phoenix.sensors.SensorInitializationStrategy;
 import com.ctre.phoenix.sensors.SensorTimeBase;
-
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -26,7 +23,7 @@ public class SwerveModule {
   private final WPI_TalonFX m_driveMotor;
   private final WPI_TalonFX m_turningMotor;
   private final CANCoder m_turningEncoder;
-
+  // private PIDController mRotorPID; 
   /**
    * Constructs a SwerveModule.
    *
@@ -43,6 +40,7 @@ public class SwerveModule {
       int turningMotorEncoderChannel,
       boolean driveEncoderReversed,
       boolean turningEncoderReversed,
+      boolean turningMotorReversed,
       double cancoderOffset) {
 
     // initialize
@@ -54,6 +52,7 @@ public class SwerveModule {
     // setting
     m_driveMotor.configFactoryDefault();
     m_turningMotor.configFactoryDefault();
+    m_turningEncoder.configFactoryDefault();
 
     // voltage compensation
     m_driveMotor.enableVoltageCompensation(true);
@@ -63,28 +62,30 @@ public class SwerveModule {
 
     // sensor
     m_turningEncoder.configSensorInitializationStrategy(SensorInitializationStrategy.BootToAbsolutePosition);
-    m_turningEncoder.configAbsoluteSensorRange(AbsoluteSensorRange.Unsigned_0_to_360);
+    m_turningEncoder.configAbsoluteSensorRange(AbsoluteSensorRange.Signed_PlusMinus180);
     m_turningEncoder.configFeedbackCoefficient(0.087890625, "deg", SensorTimeBase.PerSecond);
     m_turningEncoder.configSensorDirection(turningEncoderReversed);
     m_turningEncoder.configMagnetOffset(cancoderOffset);
 
     // set remote sensor
     m_turningMotor.configRemoteFeedbackFilter(m_turningEncoder, 0);
-    m_turningMotor.configSelectedFeedbackSensor(RemoteFeedbackDevice.RemoteSensor0);
+    m_turningMotor.configSelectedFeedbackSensor(RemoteFeedbackDevice.RemoteSensor0, 0, 10);
+    m_turningMotor.configSelectedFeedbackSensor(FeedbackDevice.None, 1, 10);
+    // m_turningMotor.setSelectedSensorPosition(getTurningEncoderRaw());
     m_driveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 
     // reverse
     m_driveMotor.setInverted(driveEncoderReversed);
     m_driveMotor.setSensorPhase(driveEncoderReversed);
 
-    m_turningMotor.setInverted(driveEncoderReversed);
+    m_turningMotor.setInverted(turningMotorReversed);
     m_turningMotor.setSensorPhase(turningEncoderReversed);
 
     // deadband
     m_driveMotor.configNeutralDeadband(0.1);
     m_turningMotor.configNeutralDeadband(0.1);
 
-    // current limit
+    // stator current limit
     var currentLimit = new StatorCurrentLimitConfiguration();
     currentLimit.enable = true;
     currentLimit.triggerThresholdTime = 25;
@@ -100,7 +101,7 @@ public class SwerveModule {
     m_driveMotor.config_kI(0, 0);
     m_driveMotor.config_kD(0, 0);
 
-    m_turningMotor.config_kF(0, 0.18);
+    m_turningMotor.config_kF(0, 0.3);
     m_turningMotor.config_kP(0, 0.75);
     m_turningMotor.config_kI(0, 0);
     m_turningMotor.config_kD(0, 0.8);
@@ -109,13 +110,18 @@ public class SwerveModule {
     m_turningMotor.configMotionCruiseVelocity(1500);
 
     // close loop setting
-    m_turningMotor.configClosedLoopPeakOutput(0, 0.8);
+    m_turningMotor.configClosedLoopPeakOutput(0, 1);
+
+    // mRotorPID = new PIDController(
+    //   0.75, 0, 0.8
+    // );
+    // mRotorPID.enableContinuousInput(-180, 180);
 
 
   }
   // CANcoder to talon
   private double deg2raw(double deg) {
-    return deg / (360.0 / 4096.0);
+    return ((deg)) / (360.0 / 4096.0);
   }
 
   // m
@@ -135,7 +141,9 @@ public class SwerveModule {
     // encoder resolution.
     return m_turningEncoder.getAbsolutePosition();
   }
-
+  public double getTurningEncoderRaw() {
+    return deg2raw(getTurningEncoderAngle());
+  }
   /**
    * Returns the current state of the module.
    *
@@ -152,8 +160,7 @@ public class SwerveModule {
    * @return The current position of the module.
    */
   public SwerveModulePosition getPosition() {
-    return new SwerveModulePosition(
-        getDriveEncoderPosition(), new Rotation2d(getTurningEncoderAngle()));
+    return new SwerveModulePosition(getDriveEncoderPosition(), new Rotation2d(getTurningEncoderAngle()));
   }
 
   /**
@@ -163,12 +170,12 @@ public class SwerveModule {
    */
   public void setDesiredState(SwerveModuleState desiredState) {
     // Optimize the reference state to avoid spinning further than 90 degrees
-    SwerveModuleState state = desiredState;
-        // SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
+    SwerveModuleState state = 
+        SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
 
-    // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(0));
+    // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(45));
     // SmartDashboard.putNumber("", getDriveEncoderPosition())
-    SmartDashboard.putNumber("target(deg)" + m_turningEncoder.getDeviceID(), state.angle.getDegrees());
+    SmartDashboard.putNumber("target(deg)" + m_turningEncoder.getDeviceID(), (state.angle.getDegrees()));
     SmartDashboard.putNumber("target(raw)" + m_turningEncoder.getDeviceID(), deg2raw(state.angle.getDegrees()));
     // m -> raw
     // m_driveMotor.set(ControlMode.Velocity, state.speedMetersPerSecond / ModuleConstants.kDriveCoefficient);

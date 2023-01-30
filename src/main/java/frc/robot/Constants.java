@@ -33,8 +33,14 @@ public final class Constants {
 
     public static final boolean kFrontLeftTurningEncoderReversed = false;
     public static final boolean kRearLeftTurningEncoderReversed = false;
-    public static final boolean kFrontRightTurningEncoderReversed = false;
-    public static final boolean kRearRightTurningEncoderReversed = false;
+    public static final boolean kFrontRightTurningEncoderReversed = true;
+    public static final boolean kRearRightTurningEncoderReversed = true;
+
+    public static final boolean kOutputRever1 = true;
+    public static final boolean kOutputRever2 = true;
+    public static final boolean kOutputRever3 = true;
+    public static final boolean kOutputRever4 = true;
+
 
     public static final boolean kFrontLeftDriveEncoderReversed = false;
     public static final boolean kRearLeftDriveEncoderReversed = true;
@@ -46,9 +52,9 @@ public final class Constants {
     public static final int kFrontRightTurningMotorEncoderChannel = 2;
     public static final int kRearRightTurningMotorEncoderChannel = 4;
 
-    public static final double kTrackWidth = 0.5;
+    public static final double kTrackWidth = 0.67;
     // Distance between centers of right and left wheels on robot
-    public static final double kWheelBase = 0.7;
+    public static final double kWheelBase = 0.67;
     // Distance between front and back wheels on robot
     public static final SwerveDriveKinematics kDriveKinematics =
         new SwerveDriveKinematics(
@@ -76,10 +82,9 @@ public final class Constants {
 
     public static final int kEncoderCPR = 2048;
     public static final int kCanCoder = 4096;
-    public static final double kWheelDiameterMeters = 0.15;
     public static final double kDriveCoefficient =
         // Assumes the encoders are directly mounted on the wheel shafts
-        (kWheelDiameterMeters * Math.PI) / (double) kEncoderCPR;
+        0.31596 / (double) kEncoderCPR;
 
     public static final double kTurningEncoderDistancePerPulse =
         // Assumes the encoders are on a 1:1 reduction with the module shaft.
