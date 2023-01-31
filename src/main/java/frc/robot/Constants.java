@@ -60,9 +60,9 @@ public final class Constants {
     public static final int kFrontRightTurningMotorEncoderChannel = 2;
     public static final int kRearRightTurningMotorEncoderChannel = 4;
 
-    public static final double kTrackWidth = 0.67;
+    public static final double kTrackWidth = 0.5;
     // Distance between centers of right and left wheels on robot
-    public static final double kWheelBase = 0.67;
+    public static final double kWheelBase = 0.5;
     // Distance between front and back wheels on robot
     public static final SwerveDriveKinematics kDriveKinematics =
         new SwerveDriveKinematics(

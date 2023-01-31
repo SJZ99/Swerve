@@ -6,6 +6,7 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.RemoteFeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
@@ -73,6 +74,7 @@ public class SwerveModule {
     m_turningMotor.configRemoteFeedbackFilter(m_turningEncoder, 0);
     m_turningMotor.configSelectedFeedbackSensor(RemoteFeedbackDevice.RemoteSensor0, 0, 10);
     m_turningMotor.configSelectedFeedbackSensor(FeedbackDevice.None, 1, 10);
+    
     m_driveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 
     // reverse
@@ -86,31 +88,31 @@ public class SwerveModule {
     m_turningMotor.configNeutralDeadband(0.1);
 
     // stator current limit
-    var currentLimit = new StatorCurrentLimitConfiguration();
-    currentLimit.enable = true;
-    currentLimit.triggerThresholdTime = 25;
-    currentLimit.triggerThresholdCurrent = 30;
-    currentLimit.triggerThresholdTime = 0.1;
+    // var currentLimit = new StatorCurrentLimitConfiguration();
+    // currentLimit.enable = true;
+    // currentLimit.triggerThresholdTime = 25;
+    // currentLimit.triggerThresholdCurrent = 30;
+    // currentLimit.triggerThresholdTime = 0.1;
 
-    m_driveMotor.configStatorCurrentLimit(currentLimit);
-    m_turningMotor.configStatorCurrentLimit(currentLimit);
+    // m_driveMotor.configStatorCurrentLimit(currentLimit);
+    // m_turningMotor.configStatorCurrentLimit(currentLimit);
 
     // PIDF
-    m_driveMotor.config_kF(0, 0.2);
-    m_driveMotor.config_kP(0, 0);
+    m_driveMotor.config_kF(0, 0.11);
+    m_driveMotor.config_kP(0, 0.008);
     m_driveMotor.config_kI(0, 0);
     m_driveMotor.config_kD(0, 0);
 
-    m_turningMotor.config_kF(0, 0.3);
-    m_turningMotor.config_kP(0, 0.75);
+    m_turningMotor.config_kF(0, 0.6);
+    m_turningMotor.config_kP(0, 1);
     m_turningMotor.config_kI(0, 0);
     m_turningMotor.config_kD(0, 0.8);
 
-    m_turningMotor.configMotionAcceleration(1500);
-    m_turningMotor.configMotionCruiseVelocity(1500);
-
+    m_turningMotor.configMotionAcceleration(1024);
+    m_turningMotor.configMotionCruiseVelocity(1024);
+    m_turningMotor.setNeutralMode(NeutralMode.Brake);
     // close loop setting
-    m_turningMotor.configClosedLoopPeakOutput(0, 1);
+    // m_turningMotor.configClosedLoopPeakOutput(0, 1);
 
     // mRotorPID = new PIDController(
     //   0.75, 0, 0.8
@@ -141,6 +143,10 @@ public class SwerveModule {
     // encoder resolution.
     return m_turningMotor.getSelectedSensorPosition() / 4096.0 * 360.0;
   }
+
+  public double getTurningEncoderRadian() {
+    return getTurningEncoderAngle() / 180.0 * Math.PI;
+  }
   public double getTurningEncoderRaw() {
     return deg2raw(getTurningEncoderAngle());
   }
@@ -151,7 +157,7 @@ public class SwerveModule {
    */
   public SwerveModuleState getState() {
     return new SwerveModuleState(
-        getDriveEncoderVelocity(), new Rotation2d(getTurningEncoderAngle()));
+        getDriveEncoderVelocity(), new Rotation2d(getTurningEncoderRadian()));
   }
 
   /**
@@ -160,7 +166,7 @@ public class SwerveModule {
    * @return The current position of the module.
    */
   public SwerveModulePosition getPosition() {
-    return new SwerveModulePosition(getDriveEncoderPosition(), new Rotation2d(getTurningEncoderAngle() / 180 * Math.PI));
+    return new SwerveModulePosition(getDriveEncoderPosition(), new Rotation2d(getTurningEncoderRadian()));
   }
 
   /**
@@ -171,10 +177,9 @@ public class SwerveModule {
   public void setDesiredState(SwerveModuleState desiredState) {
     // Optimize the reference state to avoid spinning further than 90 degrees
     SwerveModuleState state = 
-        SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
+        SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderRadian()));
 
     // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(90));
-    // SmartDashboard.putNumber("", getDriveEncoderPosition())
     SmartDashboard.putNumber("target(deg)" + m_turningEncoder.getDeviceID(), (state.angle.getDegrees()));
     SmartDashboard.putNumber("target(raw)" + m_turningEncoder.getDeviceID(), deg2raw(state.angle.getDegrees()));
     // m -> raw

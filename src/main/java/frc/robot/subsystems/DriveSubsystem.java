@@ -7,6 +7,7 @@ package frc.robot.subsystems;
 import com.ctre.phoenix.sensors.Pigeon2Configuration;
 import com.ctre.phoenix.sensors.WPI_Pigeon2;
 
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -111,6 +112,7 @@ public class DriveSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Mod3(raw)", m_rearLeft.getTurningEncoderRaw());
     SmartDashboard.putNumber("Mod4(raw)", m_rearRight.getTurningEncoderRaw());
 
+    SmartDashboard.putNumber("GYRO", m_gyro.getYaw());
   }
 
   /**
@@ -139,6 +141,8 @@ public class DriveSubsystem extends SubsystemBase {
         },
         pose);
   }
+  SlewRateLimiter limiter1 = new SlewRateLimiter(1.5, -1.5, 0);
+  SlewRateLimiter limiter2 = new SlewRateLimiter(1.5, -1.5, 0);
 
   /**
    * Method to drive the robot using joystick info.
@@ -150,9 +154,13 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
     // deadzone
-    if(Math.abs(xSpeed) < 0.1 && Math.abs(ySpeed) < 0.1 && Math.abs(rot) < 0.1) {
-      return;
+    if(Math.abs(xSpeed) < 0.1 && Math.abs(ySpeed) < 0.1 && Math.abs(rot) < 0.25) {
+      xSpeed = 0;
+      ySpeed = 0;
+      rot = 0;
     }
+    xSpeed = limiter1.calculate(xSpeed);
+    ySpeed = limiter2.calculate(ySpeed);
 
     var swerveModuleStates =
         DriveConstants.kDriveKinematics.toSwerveModuleStates(
