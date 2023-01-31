@@ -41,6 +41,7 @@ public class SwerveModule {
       boolean driveEncoderReversed,
       boolean turningEncoderReversed,
       boolean turningMotorReversed,
+      boolean driveReversed,
       double cancoderOffset) {
 
     // initialize
@@ -66,20 +67,19 @@ public class SwerveModule {
     m_turningEncoder.configFeedbackCoefficient(0.087890625, "deg", SensorTimeBase.PerSecond);
     m_turningEncoder.configSensorDirection(turningEncoderReversed);
     m_turningEncoder.configMagnetOffset(cancoderOffset);
+    m_turningEncoder.setPositionToAbsolute();
 
     // set remote sensor
     m_turningMotor.configRemoteFeedbackFilter(m_turningEncoder, 0);
     m_turningMotor.configSelectedFeedbackSensor(RemoteFeedbackDevice.RemoteSensor0, 0, 10);
     m_turningMotor.configSelectedFeedbackSensor(FeedbackDevice.None, 1, 10);
-    // m_turningMotor.setSelectedSensorPosition(getTurningEncoderRaw());
     m_driveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 
     // reverse
-    m_driveMotor.setInverted(driveEncoderReversed);
+    m_driveMotor.setInverted(driveReversed);
     m_driveMotor.setSensorPhase(driveEncoderReversed);
 
     m_turningMotor.setInverted(turningMotorReversed);
-    m_turningMotor.setSensorPhase(turningEncoderReversed);
 
     // deadband
     m_driveMotor.configNeutralDeadband(0.1);
@@ -139,7 +139,7 @@ public class SwerveModule {
     // Set the distance (in this case, angle) in radians per pulse for the turning encoder.
     // This is the the angle through an entire rotation (2 * pi) divided by the
     // encoder resolution.
-    return m_turningEncoder.getAbsolutePosition();
+    return m_turningMotor.getSelectedSensorPosition() / 4096.0 * 360.0;
   }
   public double getTurningEncoderRaw() {
     return deg2raw(getTurningEncoderAngle());
@@ -160,7 +160,7 @@ public class SwerveModule {
    * @return The current position of the module.
    */
   public SwerveModulePosition getPosition() {
-    return new SwerveModulePosition(getDriveEncoderPosition(), new Rotation2d(getTurningEncoderAngle()));
+    return new SwerveModulePosition(getDriveEncoderPosition(), new Rotation2d(getTurningEncoderAngle() / 180 * Math.PI));
   }
 
   /**
@@ -173,12 +173,12 @@ public class SwerveModule {
     SwerveModuleState state = 
         SwerveModuleState.optimize(desiredState, new Rotation2d(getTurningEncoderAngle()));
 
-    // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(45));
+    // state = new SwerveModuleState(0.3, Rotation2d.fromDegrees(90));
     // SmartDashboard.putNumber("", getDriveEncoderPosition())
     SmartDashboard.putNumber("target(deg)" + m_turningEncoder.getDeviceID(), (state.angle.getDegrees()));
     SmartDashboard.putNumber("target(raw)" + m_turningEncoder.getDeviceID(), deg2raw(state.angle.getDegrees()));
     // m -> raw
-    // m_driveMotor.set(ControlMode.Velocity, state.speedMetersPerSecond / ModuleConstants.kDriveCoefficient);
+    m_driveMotor.set(ControlMode.Velocity, state.speedMetersPerSecond / ModuleConstants.kDriveCoefficient);
     // deg -> raw
     m_turningMotor.set(ControlMode.MotionMagic, deg2raw(state.angle.getDegrees()));
   }
